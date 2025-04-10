@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/http-proxy-middleware": "^0.19.3"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "pg": "^8.13.3",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20"
+  }
+}
