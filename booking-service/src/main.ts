@@ -1,24 +1,21 @@
-import 'reflect-metadata';
 import express from 'express';
+import { json } from 'body-parser';
 import { AppDataSource } from './ormconfig';
 import { bookingsRouter } from './bookings/bookings.controller';
 
 async function bootstrap() {
-  try {
-    await AppDataSource.initialize();
-    console.log('Connected to PostgreSQL via DataSource (Booking Service)');
+  await AppDataSource.initialize();
+  console.log('Connected to PostgreSQL via DataSource (Booking Service)');
 
-    const app = express();
-    app.use(express.json());
+  const app = express();
+  app.use(json());
 
-    app.use('/bookings', bookingsRouter);
+  app.get('/health', (_req, res) => res.sendStatus(200));
+  app.use('/bookings', bookingsRouter);
 
-    app.listen(3003, () => {
-      console.log('Booking Service running on port 3003');
-    });
-  } catch (error) {
-    console.error('Error during Booking Service initialization:', error);
-  }
+  const port = process.env.PORT ? +process.env.PORT : 3003;
+  app.listen(port, () => {
+    console.log(`Booking Service running on port ${port}`);
+  });
 }
-
 bootstrap();

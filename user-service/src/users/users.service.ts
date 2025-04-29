@@ -1,34 +1,27 @@
-import { AppDataSource } from '../ormconfig';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 
+@Injectable()
 export class UsersService {
-  private userRepository = AppDataSource.getRepository(User);
+  constructor(
+    @InjectRepository(User)
+    private readonly repo: Repository<User>,
+  ) {}
 
-  async register(name: string, email: string, password: string) {
-    const existingUser = await this.userRepository.findOne({ where: { email } });
-    if (existingUser) {
-      throw new Error('User with this email already exists');
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = this.userRepository.create({ name, email, password: hashedPassword });
-    return this.userRepository.save(newUser);
+  async register(name: string, email: string, password: string): Promise<User> {
+    const hash = await bcrypt.hash(password, 10);
+    const user = this.repo.create({ name, email, password: hash });
+    return this.repo.save(user);
   }
 
-  async login(email: string, password: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      throw new Error('Invalid credentials');
-    }
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      created_at: user.created_at,
-    };
+  async login(email: string, password: string): Promise<User> {
+    const user = await this.repo.findOneBy({ email });
+    if (!user) throw new Error('User not found');
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) throw new Error('Wrong password');
+    return user;
   }
 }

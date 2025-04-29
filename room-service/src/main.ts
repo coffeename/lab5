@@ -1,25 +1,25 @@
-import 'reflect-metadata';
-import { AppDataSource } from './ormconfig';
 import express from 'express';
+import { json } from 'body-parser';
+import { AppDataSource } from './ormconfig';
 import { roomsRouter } from './rooms/rooms.controller';
 import { startSlotAvailabilityConsumer } from './rabbitmqConsumer';
 
 async function bootstrap() {
-  try {
-    await AppDataSource.initialize();
-    console.log('Connected to PostgreSQL via DataSource (Room Service)');
+  await AppDataSource.initialize();
+  console.log('Connected to PostgreSQL via DataSource (Room Service)');
 
-    startSlotAvailabilityConsumer();
+  const app = express();
+  app.use(json());
 
-    const app = express();
-    app.use(express.json());
-    app.use('/rooms', roomsRouter);
-    app.listen(3002, () => {
-      console.log('Room Service running on port 3002');
-    });
-  } catch (error) {
-    console.error('Error during Room Service initialization:', error);
-  }
+  app.get('/health', (_req, res) => res.sendStatus(200));
+
+  app.use('/rooms', roomsRouter);
+
+  startSlotAvailabilityConsumer();
+
+  const port = process.env.PORT ? +process.env.PORT : 3002;
+  app.listen(port, () => {
+    console.log(`Room Service running on port ${port}`);
+  });
 }
-
 bootstrap();

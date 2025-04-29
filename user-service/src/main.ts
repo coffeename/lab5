@@ -1,23 +1,18 @@
-import { AppDataSource } from './ormconfig';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
-import { usersRouter } from './users/users.controller';
 
 async function bootstrap() {
-  try {
-    await AppDataSource.initialize();
-    console.log('Connected to PostgreSQL via DataSource');
+  const server = express();
+  server.get('/health', (_req, res) => res.sendStatus(200));
 
-    const app = express();
-    app.use(express.json());
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+  await app.init();
 
-    app.use('/users', usersRouter);
-
-    app.listen(3000, () => {
-      console.log('User Service running on port 3000');
-    });
-  } catch (error) {
-    console.error('Error during Data Source initialization:', error);
-  }
+  const port = +(process.env.PORT || 3000);
+  server.listen(port, () => {
+    console.log(`User Service (Nest) running on port ${port}`);
+  });
 }
-
 bootstrap();

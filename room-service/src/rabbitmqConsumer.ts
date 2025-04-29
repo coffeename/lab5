@@ -3,41 +3,39 @@ import { AppDataSource } from './ormconfig';
 import { AvailableSlot } from './rooms/slot.entity';
 
 export async function startSlotAvailabilityConsumer() {
-  const connection = await amqp.connect('amqp://localhost');
+  const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672';
+  const connection = await amqp.connect(rabbitUrl);
   const channel = await connection.createChannel();
   const requestQueue = 'slot_availability_request';
 
   await channel.assertQueue(requestQueue, { durable: false });
 
-  channel.consume(requestQueue, async (msg) => {
-    if (msg) {
-      const data = JSON.parse(msg.content.toString());
-      const { room_id, start_time, end_time } = data;
+  channel.consume(
+    requestQueue,
+    async (msg) => {
+      if (!msg) return;
+      const { room_id, start_time, end_time } = JSON.parse(msg.content.toString());
 
-      const slotRepository = AppDataSource.getRepository(AvailableSlot);
-      const slot = await slotRepository.findOne({
+      const slotRepo = AppDataSource.getRepository(AvailableSlot);
+      const slot = await slotRepo.findOne({
         where: {
           room: { id: room_id },
           start_time: new Date(start_time),
           end_time: new Date(end_time),
-          is_available: true
-        }
+          is_available: true,
+        },
       });
 
-      let available = false;
-      if (slot) {
-        slot.is_available = false;
-        await slotRepository.save(slot);
-        available = true;
-      } 
-
-      const response = JSON.stringify({ available });
-      channel.sendToQueue(msg.properties.replyTo, Buffer.from(response), {
-        correlationId: msg.properties.correlationId
-      });
+      const response = JSON.stringify({ available: !!slot });
+      channel.sendToQueue(
+        msg.properties.replyTo!,
+        Buffer.from(response),
+        { correlationId: msg.properties.correlationId! }
+      );
       channel.ack(msg);
-    }
-  });
+    },
+    { noAck: false }
+  );
 
   console.log('Room Service is listening for slot availability requests');
 }

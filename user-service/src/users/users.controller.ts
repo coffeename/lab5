@@ -1,34 +1,37 @@
-import { Router, Request, Response } from 'express';
+import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { User } from './user.entity';
 
-export const usersRouter = Router();
+@Controller('users')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
 
-const usersService = new UsersService();
-
-// перевірка POST реєстрац
-usersRouter.post('/register', async (req: Request, res: Response) => {
-  try {
-    const { name, email, password } = req.body;
-    const newUser = await usersService.register(name, email, password);
-    return res.status(201).json({
-      message: 'User registered successfully',
-      user: newUser,
-    });
-  } catch (error: any) {
-    return res.status(400).json({ error: error.message });
+  @Post('register')
+  async register(
+    @Body('name') name: string,
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ): Promise<Partial<User>> {
+    try {
+      const u = await this.usersService.register(name, email, password);
+      const { password: _, ...rest } = u;
+      return rest;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
-});
 
-// перевірка POST логін
-usersRouter.post('/login', async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    const user = await usersService.login(email, password);
-    return res.json({
-      message: 'Login successful',
-      user,
-    });
-  } catch (error: any) {
-    return res.status(401).json({ error: error.message });
+  @Post('login')
+  async login(
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ): Promise<Partial<User>> {
+    try {
+      const u = await this.usersService.login(email, password);
+      const { password: _, ...rest } = u;
+      return rest;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.UNAUTHORIZED);
+    }
   }
-});
+}

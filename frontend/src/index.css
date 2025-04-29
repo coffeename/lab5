@@ -1,0 +1,26 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: none;
+  position: relative;
+  overflow: hidden; 
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url('/public/roombooking.png') center/cover no-repeat fixed;
+  filter: blur(5px);
+  z-index: -1;
+}
+
+#root {
+  position: relative;
+  z-index: 0;
+  background: transparent;
+}
