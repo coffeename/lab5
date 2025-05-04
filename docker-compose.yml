@@ -27,6 +27,7 @@ services:
     build:
       context: ./user-service
       dockerfile: Dockerfile
+      # за замовчуванням збирається фінальна (друга) стадія
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -43,6 +44,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # -----------------------
+  # Новий сервіс для seed
+  seed-admin:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+      target: builder         # <-- збираємо першу стадію з усіма dev-залежностями
+    working_dir: /usr/src/app
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: mydb
+    entrypoint: ["npm", "run", "seed:admin"]
+    # не виставляємо порти — цей контейнер виконує тільки посів і виходить
 
   room-service:
     build:
@@ -65,22 +85,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    
 
   booking-service:
     build:
       context: ./booking-service
       dockerfile: Dockerfile
     depends_on:
+      postgres:
+        condition: service_started
       rabbitmq:
         condition: service_healthy
     environment:
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: mydb
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      POSTGRES_HOST:     postgres
+      POSTGRES_PORT:     "5432"
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       mydb
+      RABBITMQ_URL:      amqp://rabbitmq:5672
     ports:
       - "3003:3003"
 
@@ -94,7 +115,6 @@ services:
     ports:
       - "3001:3001"
     environment:
-      # для контейнерів звертатися по імені сервісу в мережі docker compose
       USER_SERVICE_URL:    http://user-service:3000
       ROOM_SERVICE_URL:    http://room-service:3002
       BOOKING_SERVICE_URL: http://booking-service:3003

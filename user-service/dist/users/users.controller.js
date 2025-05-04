@@ -11,17 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
@@ -33,7 +22,7 @@ let UsersController = class UsersController {
     async register(name, email, password) {
         try {
             const u = await this.usersService.register(name, email, password);
-            const { password: _ } = u, rest = __rest(u, ["password"]);
+            const { password: _, ...rest } = u;
             return rest;
         }
         catch (e) {
@@ -43,7 +32,7 @@ let UsersController = class UsersController {
     async login(email, password) {
         try {
             const u = await this.usersService.login(email, password);
-            const { password: _ } = u, rest = __rest(u, ["password"]);
+            const { password: _, ...rest } = u;
             return rest;
         }
         catch (e) {

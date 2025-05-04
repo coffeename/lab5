@@ -1,4 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity('rooms')
 export class Room {
@@ -17,9 +22,10 @@ export class Room {
   @Column()
   type!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text' })
   description!: string;
 
+  // якщо вам не потрібен стовпець created_at — закоментуйте його або приберіть
   @CreateDateColumn()
   created_at!: Date;
 }

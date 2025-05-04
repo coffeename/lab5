@@ -1,134 +1,180 @@
-import React, { useEffect, useState } from 'react';
-import SlotsList from './SlotsList';
-import './RoomsList.css';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
+import { Link } from 'react-router-dom';
 
 interface Room {
   id: string;
   name: string;
   location: string;
-  type: string;
   capacity: number;
-}
-
-interface Slot {
-  id: string;
-  start_time: string;
-  end_time: string;
-  is_available: boolean;
+  type: string;
+  description: string;
 }
 
 export default function RoomsList() {
+  const { isAuthenticated, role } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('');
-  const [slotsByRoom, setSlotsByRoom] = useState<Record<string, Slot[]>>({});
-  const [loadingSlots, setLoadingSlots] = useState<Record<string, boolean>>({});
-  const [errorSlots, setErrorSlots] = useState<Record<string, string>>({});
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [newRoom, setNewRoom] = useState<Partial<Room>>({
+    name: '',
+    location: '',
+    capacity: 0,
+    type: '',
+    description: '',
+  });
+
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
   useEffect(() => {
-    async function fetchRooms() {
-      try {
-        const res = await fetch('/rooms');
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: Room[] = await res.json();
-        setRooms(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchRooms();
+    reload();
   }, []);
 
-  const handleViewSlots = async (roomId: string) => {
-    if (slotsByRoom[roomId]) {
-      const copy = { ...slotsByRoom };
-      delete copy[roomId];
-      setSlotsByRoom(copy);
-      return;
-    }
-    setLoadingSlots(prev => ({ ...prev, [roomId]: true }));
-    try {
-      const res = await fetch(`/rooms/${roomId}/slots`);
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const slotsData: Slot[] = await res.json();
-      setSlotsByRoom(prev => ({ ...prev, [roomId]: slotsData }));
-    } catch (err: any) {
-      setErrorSlots(prev => ({ ...prev, [roomId]: err.message }));
-    } finally {
-      setLoadingSlots(prev => ({ ...prev, [roomId]: false }));
-    }
+  const reload = () => {
+    axios.get<Room[]>('/rooms').then(res => setRooms(res.data));
   };
 
-  if (loading) return <div className="loading">Loading rooms…</div>;
-  if (error) return <div className="error">Error: {error}</div>;
+  const handleCreate = async () => {
+    await axios.post('/rooms', newRoom);
+    setShowCreate(false);
+    setNewRoom({ name: '', location: '', capacity: 0, type: '', description: '' });
+    reload();
+  };
 
-  const types = Array.from(new Set(rooms.map(r => r.type)));
-  const displayed = filter ? rooms.filter(r => r.type === filter) : rooms;
+  const handleDelete = async (id: string) => {
+    await axios.delete(`/rooms/${id}`);
+    reload();
+  };
+
+  const startEdit = (room: Room) => setEditingRoom({ ...room });
+  const cancelEdit = () => setEditingRoom(null);
+  const handleSave = async () => {
+    if (!editingRoom) return;
+    const { id, name, location, capacity, type, description } = editingRoom;
+    await axios.put(`/rooms/${id}`, { name, location, capacity, type, description });
+    setEditingRoom(null);
+    reload();
+  };
 
   return (
-    <div className="rooms-list-container">
-      <div className="rooms-content">
-        <h1>Доступні кімнати</h1>
+    <div style={{ padding: '1rem' }}>
+      <h1>Rooms</h1>
 
-        <div className="filter-section">
-          <label htmlFor="type-filter">Фільтрувати за типом:</label>
-          <select
-            id="type-filter"
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-          >
-            <option value="">Всі</option>
-            {types.map(t => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="room-list">
-          {displayed.length > 0 ? (
-            displayed.map(room => (
-              <div key={room.id} className="room-card">
-                <h2>{room.name}</h2>
-                <p>
-                  <strong>Локація:</strong> {room.location}
-                </p>
-                <p>
-                  <strong>Тип:</strong> {room.type}
-                </p>
-                <p>
-                  <strong>Вмістимість:</strong> {room.capacity}
-                </p>
-
-                <button
-                  onClick={() => handleViewSlots(room.id)}
-                  className="slots-toggle-btn"
-                >
-                  {slotsByRoom[room.id] ? 'Приховати слоти' : 'Показати слоти'}
-                </button>
-
-                {loadingSlots[room.id] && (
-                  <p className="loading-slots">Loading slots…</p>
-                )}
-                {errorSlots[room.id] && (
-                  <p className="error-slots">Error: {errorSlots[room.id]}</p>
-                )}
-
-                {slotsByRoom[room.id] && (
-                  <div className="slots-list-container">
-                    <SlotsList slots={slotsByRoom[room.id]} />
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="no-rooms">Немає кімнат цього типу.</p>
+      {isAuthenticated && role === 'admin' && (
+        <div style={{ marginBottom: '1em' }}>
+          <Button onClick={() => setShowCreate(v => !v)}>
+            {showCreate ? 'Cancel Create' : 'Create New Room'}
+          </Button>
+          {showCreate && (
+            <div style={{ marginTop: '0.5em', display: 'grid', gap: '0.5em' }}>
+              <input
+                placeholder="Name"
+                value={newRoom.name}
+                onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
+              />
+              <input
+                placeholder="Location"
+                value={newRoom.location}
+                onChange={e => setNewRoom(prev => ({ ...prev, location: e.target.value }))}
+              />
+              <input
+                type="number"
+                placeholder="Capacity"
+                value={newRoom.capacity}
+                onChange={e => setNewRoom(prev => ({ ...prev, capacity: +e.target.value }))}
+              />
+              <input
+                placeholder="Type"
+                value={newRoom.type}
+                onChange={e => setNewRoom(prev => ({ ...prev, type: e.target.value }))}
+              />
+              <textarea
+                placeholder="Description"
+                value={newRoom.description}
+                onChange={e => setNewRoom(prev => ({ ...prev, description: e.target.value }))}
+              />
+              <Button onClick={handleCreate}>Save New Room</Button>
+            </div>
           )}
         </div>
+      )}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1em' }}>
+        {rooms.map(r => (
+          <Card key={r.id} style={{ flex: '1 1 300px', padding: '1rem' }}>
+            {editingRoom?.id === r.id ? (
+              <div style={{ display: 'grid', gap: '0.5em' }}>
+                <input
+                  value={editingRoom.name}
+                  onChange={e =>
+                    setEditingRoom(prev => (prev ? { ...prev, name: e.target.value } : prev))
+                  }
+                />
+                <input
+                  value={editingRoom.location}
+                  onChange={e =>
+                    setEditingRoom(prev => (prev ? { ...prev, location: e.target.value } : prev))
+                  }
+                />
+                <input
+                  type="number"
+                  value={editingRoom.capacity}
+                  onChange={e =>
+                    setEditingRoom(prev =>
+                      prev ? { ...prev, capacity: +e.target.value } : prev
+                    )
+                  }
+                />
+                <input
+                  value={editingRoom.type}
+                  onChange={e =>
+                    setEditingRoom(prev => (prev ? { ...prev, type: e.target.value } : prev))
+                  }
+                />
+                <textarea
+                  value={editingRoom.description}
+                  onChange={e =>
+                    setEditingRoom(prev =>
+                      prev ? { ...prev, description: e.target.value } : prev
+                    )
+                  }
+                />
+                <div style={{ display: 'flex', gap: '0.5em' }}>
+                  <Button onClick={handleSave}>Save</Button>
+                  <Button onClick={cancelEdit}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2>{r.name}</h2>
+                <p><strong>Location:</strong> {r.location}</p>
+                <p><strong>Capacity:</strong> {r.capacity}</p>
+                <p><strong>Type:</strong> {r.type}</p>
+                <p>{r.description}</p>
+
+                <div style={{ marginTop: '0.5em', display: 'flex', gap: '0.5em' }}>
+                  {isAuthenticated && role === 'admin' && (
+                    <>
+                      <Link to={`/rooms/${r.id}/slots`}>
+                        <Button>Manage Slots</Button>
+                      </Link>
+                      <Button onClick={() => startEdit(r)}>Edit</Button>
+                      <Button onClick={() => handleDelete(r.id)}>Delete</Button>
+                    </>
+                  )}
+                  {isAuthenticated && role === 'user' && (
+                    <Link to={`/rooms/${r.id}/slots`}>
+                      <Button>View Slots</Button>
+                    </Link>
+                  )}
+                </div>
+              </>
+            )}
+          </Card>
+        ))}
       </div>
     </div>
   );

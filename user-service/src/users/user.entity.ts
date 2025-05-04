@@ -1,4 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+export enum UserRole {
+  USER  = 'user',
+  ADMIN = 'admin',
+}
 
 @Entity('users')
 export class User {
@@ -11,10 +16,13 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  //зберігання хешованого пароля
   @Column()
   password!: string;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at!: Date;
+  @Column({
+    type:    'enum',
+    enum:    UserRole,
+    default: UserRole.USER,
+  })
+  role!: UserRole;
 }

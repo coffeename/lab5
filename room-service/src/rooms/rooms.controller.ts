@@ -1,14 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { RoomsService } from './rooms.service';
 import { SlotsService } from './slots.service';
+import { adminGuard } from '../admin.middleware';
 
 export const roomsRouter = Router();
 const roomsService = new RoomsService();
 const slotsService = new SlotsService();
 
 // ------------------ КІМНАТИ ------------------ //
-// POST /rooms
-roomsRouter.post('/', async (req: Request, res: Response) => {
+
+// POST /rooms (тільки для admin)
+roomsRouter.post('/', adminGuard, async (req: Request, res: Response) => {
   try {
     const room = await roomsService.createRoom(req.body);
     return res.status(201).json(room);
@@ -17,7 +19,7 @@ roomsRouter.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /rooms
+// GET /rooms (всім)
 roomsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const rooms = await roomsService.getAllRooms();
@@ -27,7 +29,7 @@ roomsRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /rooms/:id
+// GET /rooms/:id (всім)
 roomsRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const room = await roomsService.getRoomById(req.params.id);
@@ -40,8 +42,8 @@ roomsRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /rooms/:id
-roomsRouter.put('/:id', async (req: Request, res: Response) => {
+// PUT /rooms/:id (тільки для admin)
+roomsRouter.put('/:id', adminGuard, async (req: Request, res: Response) => {
   try {
     const updatedRoom = await roomsService.updateRoom(req.params.id, req.body);
     if (!updatedRoom) {
@@ -53,8 +55,8 @@ roomsRouter.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /rooms/:id
-roomsRouter.delete('/:id', async (req: Request, res: Response) => {
+// DELETE /rooms/:id (тільки для admin)
+roomsRouter.delete('/:id', adminGuard, async (req: Request, res: Response) => {
   try {
     const result = await roomsService.deleteRoom(req.params.id);
     if (result.affected === 0) {
@@ -67,26 +69,31 @@ roomsRouter.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // ------------------ СЛОТИ ------------------ //
-// POST /rooms/:roomId/slots
-roomsRouter.post('/:roomId/slots', async (req: Request, res: Response) => {
-  try {
-    const { start_time, end_time, is_available } = req.body;
-    const roomId = req.params.roomId;
 
-    const newSlot = await slotsService.createSlot(
-      roomId,
-      new Date(start_time),
-      new Date(end_time),
-      is_available
-    );
+// POST /rooms/:roomId/slots (тільки для admin)
+roomsRouter.post(
+  '/:roomId/slots',
+  adminGuard,
+  async (req: Request, res: Response) => {
+    try {
+      const { start_time, end_time, is_available } = req.body;
+      const roomId = req.params.roomId;
 
-    return res.status(201).json(newSlot);
-  } catch (error: any) {
-    return res.status(400).json({ error: error.message });
+      const newSlot = await slotsService.createSlot(
+        roomId,
+        new Date(start_time),
+        new Date(end_time),
+        is_available
+      );
+
+      return res.status(201).json(newSlot);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
   }
-});
+);
 
-// Отримання списку слотів для кімнати: GET /rooms/:roomId/slots
+// GET /rooms/:roomId/slots (всім)
 roomsRouter.get('/:roomId/slots', async (req: Request, res: Response) => {
   try {
     const roomId = req.params.roomId;
@@ -97,7 +104,7 @@ roomsRouter.get('/:roomId/slots', async (req: Request, res: Response) => {
   }
 });
 
-// Інфа про конкр. слот: GET /rooms/slots/:slotId
+// GET /rooms/slots/:slotId (всім)
 roomsRouter.get('/slots/:slotId', async (req: Request, res: Response) => {
   try {
     const slotId = req.params.slotId;
@@ -111,30 +118,38 @@ roomsRouter.get('/slots/:slotId', async (req: Request, res: Response) => {
   }
 });
 
-// Оновити слот: PUT /rooms/slots/:slotId
-roomsRouter.put('/slots/:slotId', async (req: Request, res: Response) => {
-  try {
-    const slotId = req.params.slotId;
-    const updatedSlot = await slotsService.updateSlot(slotId, req.body);
-    if (!updatedSlot) {
-      return res.status(404).json({ error: 'Slot not found' });
+// PUT /rooms/slots/:slotId (тільки для admin)
+roomsRouter.put(
+  '/slots/:slotId',
+  adminGuard,
+  async (req: Request, res: Response) => {
+    try {
+      const slotId = req.params.slotId;
+      const updatedSlot = await slotsService.updateSlot(slotId, req.body);
+      if (!updatedSlot) {
+        return res.status(404).json({ error: 'Slot not found' });
+      }
+      return res.json(updatedSlot);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
     }
-    return res.json(updatedSlot);
-  } catch (error: any) {
-    return res.status(400).json({ error: error.message });
   }
-});
+);
 
-// Видалити слот: DELETE /rooms/slots/:slotId
-roomsRouter.delete('/slots/:slotId', async (req: Request, res: Response) => {
-  try {
-    const slotId = req.params.slotId;
-    const deleted = await slotsService.deleteSlot(slotId);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Slot not found' });
+// DELETE /rooms/slots/:slotId (тільки для admin)
+roomsRouter.delete(
+  '/slots/:slotId',
+  adminGuard,
+  async (req: Request, res: Response) => {
+    try {
+      const slotId = req.params.slotId;
+      const deleted = await slotsService.deleteSlot(slotId);
+      if (!deleted) {
+        return res.status(404).json({ error: 'Slot not found' });
+      }
+      return res.json({ message: 'Slot deleted successfully' });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    return res.json({ message: 'Slot deleted successfully' });
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
   }
-});
+);

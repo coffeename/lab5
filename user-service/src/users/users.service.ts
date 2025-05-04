@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -19,9 +19,13 @@ export class UsersService {
 
   async login(email: string, password: string): Promise<User> {
     const user = await this.repo.findOneBy({ email });
-    if (!user) throw new Error('User not found');
+    if (!user) throw new UnauthorizedException('Користувача не знайдено');
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) throw new Error('Wrong password');
+    if (!ok) throw new UnauthorizedException('Невірний пароль');
     return user;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.repo.findOneBy({ email });
   }
 }

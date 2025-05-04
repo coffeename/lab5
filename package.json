@@ -1,12 +1,15 @@
 {
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
-    "@types/http-proxy-middleware": "^0.19.3"
+    "@types/http-proxy-middleware": "^0.19.3",
+    "bcrypt": "^5.1.1"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
     "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "typeorm": "^0.3.20"
   }
 }

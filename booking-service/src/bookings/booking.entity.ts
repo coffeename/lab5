@@ -1,8 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { AvailableSlot } from '../rooms/slot.entity';
 
 export enum BookingStatus {
-  CONFIRMED = "confirmed",
-  CANCELLED = "cancelled"
+  CONFIRMED = 'confirmed',
+  CANCELLED = 'cancelled',
 }
 
 @Entity('bookings')
@@ -11,10 +19,10 @@ export class Booking {
   id!: string;
 
   @Column()
-  user_id!: string;  
+  user_id!: string;
 
   @Column()
-  room_id!: string; 
+  room_id!: string;
 
   @Column({ type: 'timestamp' })
   start_time!: Date;
@@ -22,7 +30,18 @@ export class Booking {
   @Column({ type: 'timestamp' })
   end_time!: Date;
 
-  @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.CONFIRMED })
+  @Column({ name: 'slot_id', type: 'uuid', nullable: true })
+  slot_id!: string | null;
+
+  @ManyToOne(() => AvailableSlot)
+  @JoinColumn({ name: 'slot_id' })
+  slot!: AvailableSlot;
+
+  @Column({
+    type: 'enum',
+    enum: BookingStatus,
+    default: BookingStatus.CONFIRMED,
+  })
   status!: BookingStatus;
 
   @CreateDateColumn()
